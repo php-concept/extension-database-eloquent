@@ -1,7 +1,6 @@
 {
     "name": "php-concept/extension-database-eloquent",
     "description": "Concept Database extension — Illuminate Eloquent via Capsule",
-    "version": "1.0.0",
     "type": "library",
     "license": "MIT",
     "autoload": {
