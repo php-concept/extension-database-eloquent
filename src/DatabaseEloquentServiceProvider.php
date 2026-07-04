@@ -14,6 +14,7 @@ use Concept\Extensions\DatabaseEloquent\Registries\SeederRegistry;
 use Concept\Extensions\DataMasker\Contracts\DataMaskerInterface;
 use Concept\Extensions\Event\Events\ExtensionAwakened;
 use Concept\Extensions\Event\Support\EventDispatcherResolver;
+use Closure;
 use Illuminate\Container\Container as IlluminateContainer;
 use Illuminate\Database\Capsule\Manager as CapsuleManager;
 use Illuminate\Database\Events\QueryExecuted;
@@ -37,6 +38,7 @@ class DatabaseEloquentServiceProvider extends AbstractServiceProvider implements
      * @param array<string, mixed> $connection
      * @param list<string> $migrationPaths
      * @param list<class-string> $seeders
+     * @param Closure(): ?DataMaskerInterface|null $dataMaskerFactory
      */
     public function __construct(
         private readonly array $connection,
@@ -47,6 +49,7 @@ class DatabaseEloquentServiceProvider extends AbstractServiceProvider implements
         private readonly array $migrationPaths = [],
         private readonly array $seeders = [],
         private readonly bool $emitQueryEvents = false,
+        private readonly ?Closure $dataMaskerFactory = null,
     ) {}
 
     public function provides(string $id): bool
@@ -152,7 +155,7 @@ class DatabaseEloquentServiceProvider extends AbstractServiceProvider implements
             return new DbSeederListCommand($seederRegistry);
         })->setShared(true);
 
-        $container->add(QueryLogger::class, function() use ($container): QueryLogger {
+        $container->add(QueryLogger::class, function(): QueryLogger {
             $monolog = new Monolog('query');
             $monolog->pushHandler(new RotatingFileHandler(
                 $this->logPath,
@@ -160,13 +163,20 @@ class DatabaseEloquentServiceProvider extends AbstractServiceProvider implements
                 Level::Debug,
             ));
 
-            /** @var DataMaskerInterface|null $masker */
-            $masker = $container->has(DataMaskerInterface::class)
-                ? $container->get(DataMaskerInterface::class)
-                : null;
-
-            return new QueryLogger($monolog, $masker);
+            return new QueryLogger($monolog, $this->resolveDataMasker());
         })->setShared(true);
+    }
+
+    private function resolveDataMasker(): ?DataMaskerInterface
+    {
+        if ($this->dataMaskerFactory === null) {
+            return null;
+        }
+
+        $dataMaskerFactory = $this->dataMaskerFactory;
+        $masker = $dataMaskerFactory();
+
+        return $masker instanceof DataMaskerInterface ? $masker : null;
     }
 
     public function boot(): void
