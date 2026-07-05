@@ -42,7 +42,7 @@ class DatabaseEloquentServiceProvider extends AbstractServiceProvider implements
         private readonly string $migrationsTable = self::DEFAULT_TABLE_NAME,
         private readonly array $seeders = [],
         private readonly bool $logEnabled = false,
-        private readonly string $logPath = '/storage/logs/query.log',
+        private readonly string $logFilePath = '',
         private readonly int $logMaxFiles = 7,
         private readonly ?Closure $dataMaskerFactory = null,
         private readonly bool $emitQueryEvents = false,
@@ -118,7 +118,7 @@ class DatabaseEloquentServiceProvider extends AbstractServiceProvider implements
         $container->add(QueryLogger::class, function(): QueryLogger {
             $monolog = new Monolog('query');
             $monolog->pushHandler(new RotatingFileHandler(
-                $this->logPath,
+                $this->logFilePath,
                 $this->logMaxFiles,
                 Level::Debug,
             ));
