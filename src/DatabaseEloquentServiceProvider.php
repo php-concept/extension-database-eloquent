@@ -2,11 +2,7 @@
 
 namespace Concept\Extensions\DatabaseEloquent;
 
-use Concept\Extensions\DatabaseEloquent\Console\Commands\DbMigrateCommand;
 use Concept\Extensions\DatabaseEloquent\Console\Commands\DbMigrationListCommand;
-use Concept\Extensions\DatabaseEloquent\Console\Commands\DbRollbackCommand;
-use Concept\Extensions\DatabaseEloquent\Console\Commands\DbSeedCommand;
-use Concept\Extensions\DatabaseEloquent\Console\Commands\DbSeederListCommand;
 use Concept\Extensions\DatabaseEloquent\Contracts\DatabaseInterface;
 use Concept\Extensions\DatabaseEloquent\Events\DatabaseQueryExecuted;
 use Concept\Extensions\DatabaseEloquent\Registries\MigrationRegistry;
@@ -42,14 +38,14 @@ class DatabaseEloquentServiceProvider extends AbstractServiceProvider implements
      */
     public function __construct(
         private readonly array $connection,
-        private readonly bool $logEnabled,
-        private readonly string $logPath,
-        private readonly int $logMaxFiles,
-        private readonly string $migrationsTable = self::DEFAULT_TABLE_NAME,
         private readonly array $migrationPaths = [],
+        private readonly string $migrationsTable = self::DEFAULT_TABLE_NAME,
         private readonly array $seeders = [],
-        private readonly bool $emitQueryEvents = false,
+        private readonly bool $logEnabled = false,
+        private readonly string $logPath = '/storage/logs/query.log',
+        private readonly int $logMaxFiles = 7,
         private readonly ?Closure $dataMaskerFactory = null,
+        private readonly bool $emitQueryEvents = false,
     ) {}
 
     public function provides(string $id): bool
@@ -63,10 +59,6 @@ class DatabaseEloquentServiceProvider extends AbstractServiceProvider implements
             SeederRegistry::class,
             MigrationRegistry::class,
             DbMigrationListCommand::class,
-            DbMigrateCommand::class,
-            DbRollbackCommand::class,
-            DbSeedCommand::class,
-            DbSeederListCommand::class,
         ], true);
     }
 
@@ -121,38 +113,6 @@ class DatabaseEloquentServiceProvider extends AbstractServiceProvider implements
                 migrationsTable: $migrationTableName,
                 capsule: $capsuleManager,
             );
-        })->setShared(true);
-
-        $container->add(DbMigrateCommand::class, function() use ($container): DbMigrateCommand {
-            /** @var Migrator $migrator */
-            $migrator = $container->get(Migrator::class);
-            /** @var MigrationRegistry $migrationRegistry */
-            $migrationRegistry = $container->get(MigrationRegistry::class);
-
-            return new DbMigrateCommand($migrator, $migrationRegistry);
-        })->setShared(true);
-
-        $container->add(DbRollbackCommand::class, function() use ($container): DbRollbackCommand {
-            /** @var Migrator $migrator */
-            $migrator = $container->get(Migrator::class);
-            /** @var MigrationRegistry $migrationRegistry */
-            $migrationRegistry = $container->get(MigrationRegistry::class);
-
-            return new DbRollbackCommand($migrator, $migrationRegistry);
-        })->setShared(true);
-
-        $container->add(DbSeedCommand::class, function() use ($container): DbSeedCommand {
-            /** @var SeederManager $seederManager */
-            $seederManager = $container->get(SeederManager::class);
-
-            return new DbSeedCommand($seederManager);
-        })->setShared(true);
-
-        $container->add(DbSeederListCommand::class, function() use ($container): DbSeederListCommand {
-            /** @var SeederRegistry $seederRegistry */
-            $seederRegistry = $container->get(SeederRegistry::class);
-
-            return new DbSeederListCommand($seederRegistry);
         })->setShared(true);
 
         $container->add(QueryLogger::class, function(): QueryLogger {
