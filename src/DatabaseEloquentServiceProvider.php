@@ -10,6 +10,7 @@ use Concept\Extensions\DatabaseEloquent\Registries\SeederRegistry;
 use Concept\Extensions\DataMasker\Contracts\DataMaskerInterface;
 use Concept\Extensions\Event\Events\ExtensionAwakened;
 use Concept\Extensions\Event\Support\EventDispatcherResolver;
+use Concept\Support\FactoryResolver;
 use Closure;
 use Illuminate\Container\Container as IlluminateContainer;
 use Illuminate\Database\Capsule\Manager as CapsuleManager;
@@ -129,14 +130,11 @@ class DatabaseEloquentServiceProvider extends AbstractServiceProvider implements
 
     private function resolveDataMasker(): ?DataMaskerInterface
     {
-        if ($this->dataMaskerFactory === null) {
-            return null;
-        }
-
-        $dataMaskerFactory = $this->dataMaskerFactory;
-        $masker = $dataMaskerFactory();
-
-        return $masker instanceof DataMaskerInterface ? $masker : null;
+        return FactoryResolver::optional(
+            $this->dataMaskerFactory,
+            DataMaskerInterface::class,
+            'Data masker factory result',
+        );
     }
 
     public function boot(): void
